@@ -32,3 +32,78 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 }
+
+this.getParentProject()
+
+def getParentProject() {
+    def parent = this.getParent()
+    println "my parent project is  $parent"
+}
+
+task taskOne
+taskOne {
+
+    //定义扩展属性
+    ext.good = true
+
+    println "hello ---"
+
+    doFirst {
+        println "start ---"
+    }
+
+    doLast {
+        println "end ---"
+
+    }
+}
+task taskAndroid(dependsOn: "taskOne") {
+
+    doFirst{
+        println "task one ext good is $taskOne.good"
+    }
+
+    doLast {
+        println "task android end"
+    }
+}
+
+defaultTasks("taskAndroid")
+
+
+task myTask{
+    println "this is my task"
+
+    doFirst {
+        println "the group is 2"
+    }
+
+    doLast{
+        println "the group is 3"
+    }
+}
+
+myTask.doFirst{
+    println "the group is 1"
+}
+
+def startBuildTime,endBuildTime
+
+this.project.afterEvaluate {
+    project ->
+        def preBuildTask = project.tasks.getByName("preBuild")
+        preBuildTask.doFirst {
+            startBuildTime = System.currentTimeMillis()
+        }
+
+        def buildTask = project.tasks.getByName("build")
+        buildTask.doLast {
+            endBuildTime = System.currentTimeMillis()
+            println "current project execute time is ${endBuildTime- startBuildTime}"
+        }
+}
+
+
+
+
+

@@ -34,7 +34,7 @@ long beginOfSetting = System.currentTimeMillis()
 def beginOfConfig
 def configHasBegin = false
 def beginOfProjectConfig = new HashMap()
-def beginOfProjectExecute
+def beginOfProjectExecute =System.currentTimeMillis()
 
 gradle.projectsLoaded {
     println('初始化阶段,耗时: ' + (System.currentTimeMillis() - beginOfSetting) + ' ms')
@@ -59,7 +59,7 @@ gradle.afterProject {
 
 gradle.taskGraph.whenReady {
     println('配置阶段总耗时: ' + (System.currentTimeMillis() - beginOfConfig) + ' ms')
-    beginOfProjectExecute = System.currentTimeMillis();
+    beginOfProjectExecute = System.currentTimeMillis()
 }
 
 gradle.taskGraph.beforeTask {
@@ -74,8 +74,6 @@ gradle.taskGraph.beforeTask {
 }
 
 gradle.buildFinished {
-    println '执行阶段,耗时 ' + (System.currentTimeMillis() - beginOfProjectExecute) + ' ms'
+    def executeTime = System.currentTimeMillis() - beginOfProjectExecute
+    println "执行阶段,耗时 $executeTime  ms"
 }
-
-
-

@@ -1,15 +1,15 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    
+
     repositories {
         google()
         jcenter()
-        
+
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:3.6.3'
-        
+
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -20,10 +20,82 @@ allprojects {
     repositories {
         google()
         jcenter()
-        
+
+    }
+}
+
+subprojects {
+    if(project.plugins.hasPlugin("com.android.library")){
+        println("has library")
     }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+this.getProjects()
+
+def getProjects() {
+    println "<================>"
+    println " Root Project Start"
+    println "<================>"
+
+    //getAllprojects 方法返回了一个包含跟project与其子project的set集合
+    this.getAllprojects().eachWithIndex { Project entry, int index ->
+        //index 为0时，标识根节点即rootProject 这里对应的就是GradleDemo
+        if (index == 0) {
+            println "Root Project is $entry"
+        } else {
+            //子节点就是module_one 和 app了
+            println "Child Project is $entry"
+        }
+    }
+}
+
+this.getSubProjects()
+
+def getSubProjects(){
+    println "<================>"
+    println " Sub Project Start "
+    println "<================>"
+
+    this.getSubprojects().each {
+        project ->
+            println "child project is $project"
+    }
+
+}
+
+this.getRootPro()
+
+def getRootPro(){
+    def rootProjectName = this.getRootProject().name
+    println("root project name is $rootProjectName")
+}
+
+//project方法两个参数，一个是指定工程的路径，另外一个是配置该工程的闭包
+project("app"){
+    apply(plugin:'com.android.application')
+}
+
+println"the root file path is " + this.getRootDir().absolutePath
+println "this build file path is:" + getBuildDir().absolutePath
+println "this Project file path is:" + getProjectDir().absolutePath
+
+this.getContent("gradle.properties")
+
+def getContent(String path){
+    def mFile = file(path)
+//    println(mFile.text)
+}
+
+fileTree("app/build/outputs/apk") {
+    FileTree fileTree ->
+        fileTree.visit {
+            FileTreeElement element ->
+                println("the file is $element.file.name")
+        }
+
+}
+
