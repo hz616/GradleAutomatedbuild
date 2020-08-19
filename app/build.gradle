@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: "pluginSrc"
+apply from:'../gradle/custom.gradle'
 
 android {
     compileSdkVersion 29
@@ -22,12 +23,38 @@ android {
         }
     }
 
+    flavorDimensions "environment", "app"
+
+    productFlavors {
+
+        appOne {
+            dimension "app"
+        }
+
+        appTwo {
+            dimension "app"
+        }
+
+        dev {
+            dimension "environment"
+        }
+
+        product {
+            dimension "environment"
+        }
+
+        yufa {
+            dimension "environment"
+        }
+    }
+
 }
 
-releaseInfo{
+
+releaseInfo {
     versionCode = "1"
     versionName = "1.0.0"
-    versionInfo="第一个版本"
+    versionInfo = "第一个版本"
     fileName = "release.xml"
 }
 
@@ -67,7 +94,7 @@ taskOne {
 }
 task taskAndroid(dependsOn: "taskOne") {
 
-    doFirst{
+    doFirst {
         println "task one ext good is $taskOne.good"
     }
 
@@ -79,25 +106,45 @@ task taskAndroid(dependsOn: "taskOne") {
 defaultTasks("taskAndroid")
 
 
-task myTask{
+task myTask {
     println "this is my task"
 
     doFirst {
         println "the group is 2"
     }
 
-    doLast{
+    doLast {
         println "the group is 3"
     }
 }
 
-myTask.doFirst{
+myTask.doFirst {
     println "the group is 1"
 }
 
-def startBuildTime,endBuildTime
+//getTasks().whenTaskAdded {
+//    Task task-> println("the task ${task.name} is added to the container")//可以通过whenTaskAdded 知道那些task被添加进来
+//}
 
-this.project.afterEvaluate {
+getTasks().create([name: "createTask", group: "MyGroup", description: "createTask的描述", dependsOn: ["myTask"]]).doFirst {
+    println "the create task is create by getTasks().create"
+}
+
+getTasks().create("customTaskOne", {
+    group("MyGroup")
+    setDependsOn(["createTask"])
+    setDescription("这是自定义task的描述")
+})
+
+//创建了一个copy的任务 type为copy，则说明是那个基类的派生
+task copyDocs(type: Copy) {
+    from("doc")
+    into("src/main/java")
+}
+
+def startBuildTime, endBuildTime
+
+this.afterEvaluate {
     project ->
         def preBuildTask = project.tasks.getByName("preBuild")
         preBuildTask.doFirst {
@@ -107,8 +154,25 @@ this.project.afterEvaluate {
         def buildTask = project.tasks.getByName("build")
         buildTask.doLast {
             endBuildTime = System.currentTimeMillis()
-            println "current project execute time is ${endBuildTime- startBuildTime}"
+            println "current project execute time is ${endBuildTime - startBuildTime}"
         }
+}
+
+this.afterEvaluate {
+    this.android.applicationVariants.all { variant ->
+        variant.outputs.each {
+            def outputFileName = "app-${variant.baseName}-${variant.versionName}.apk"
+//                println outputFileName
+        }
+    }
+}
+
+
+this.afterEvaluate {
+    this.android.applicationVariants.all { variant ->
+        def task = variant.checkManifest
+//        println task.name
+    }
 }
 
 

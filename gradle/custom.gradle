@@ -1,0 +1,143 @@
+task testOne {
+    inputs.property("name", "zhangsan")
+    inputs.property("age1", "20")
+
+    outputs.file("doc")
+
+    doLast {
+        println "exec task taskOne"
+    }
+}
+
+
+//这个可以视为增量编译，因为input 和 output都不变，所以第二次执行该task的时候，直接去取缓存值，不执行
+abstract class SayHelloTask extends DefaultTask {
+
+    @Input
+    String userName
+    @Input
+    int age
+
+    @OutputDirectory
+    File destDir
+
+    @TaskAction
+    void sayHello() {
+        println "hello $userName age is $age"
+    }
+}
+
+task testTwo(type: SayHelloTask) {
+    age = 18
+    userName = "zhangsan"
+    destDir = file("$buildDir/test")
+
+    doLast {
+        println "testTwo exec"
+        this.createPropertyFile()
+    }
+}
+
+
+void createPropertyFile() {
+    def localProFile = new File(rootDir.absolutePath + "/my.properties")
+    def defaultProps = new Properties()
+    if (!localProFile.exists()) {
+        localProFile.createNewFile()
+        defaultProps.setProperty("debuggable", "true")
+        defaultProps.setProperty("groupId", "GROUP")
+        defaultProps.setProperty("artifactId", "id")
+        defaultProps.setProperty("versionName", "name")
+        defaultProps.store(new FileWriter(localProFile), "properties auto generated for resolve dependencies")
+    } else {
+        localProFile.withInputStream {
+            stream -> defaultProps.load(stream)
+        }
+    }
+}
+
+class Foo {
+    int age
+    String username
+
+    String toString() {
+        return "name = ${username}, age = ${age}"
+    }
+}
+
+getExtensions().create("foo", Foo)
+
+foo {
+    age = 30
+    username = "zhangsan"
+}
+
+task testExt {
+
+    doLast {
+        println project.foo
+    }
+
+}
+
+class Animal {
+    String username
+    int legs
+
+    Animal(String name) {
+        username = name
+    }
+
+    void setLegs(int c) {
+        legs = c
+    }
+
+    String toString() {
+        return "This animal is $username, it has ${legs} legs."
+    }
+
+}
+
+//子类
+class Pig extends Animal {
+
+    int age
+    String owner
+
+    Pig(int age, String owner) {
+        super("Pig")
+        this.age = age
+        this.owner = owner
+    }
+
+    String toString() {
+        return super.toString() + " Its age is $age, its owner is $owner."
+    }
+
+}
+
+Animal aAnimal = getExtensions().create(Animal, "animal", Pig, 3, "zhangsan")
+Pig aPig = getExtensions().create("pig", Pig, 5, "kobe")
+
+animal{
+    legs = 4
+}
+
+pig{
+    setLegs 2
+    age = 10
+}
+
+task testExtTwo{
+
+    doLast{
+        println aAnimal
+        println aPig
+        println animal
+        println pig
+    }
+}
+
+
+
+

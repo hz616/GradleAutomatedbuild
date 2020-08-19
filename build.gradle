@@ -8,7 +8,7 @@ buildscript {
 
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.3'
+        classpath 'com.android.tools.build:gradle:4.0.1'
 
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -42,15 +42,15 @@ def getProjects() {
     println "<================>"
 
     //getAllprojects 方法返回了一个包含跟project与其子project的set集合
-    this.getAllprojects().eachWithIndex { Project entry, int index ->
-        //index 为0时，标识根节点即rootProject 这里对应的就是GradleDemo
-        if (index == 0) {
-            println "Root Project is $entry"
-        } else {
-            //子节点就是module_one 和 app了
-            println "Child Project is $entry"
-        }
-    }
+//    this.getAllprojects().eachWithIndex { Project entry, int index ->
+//        //index 为0时，标识根节点即rootProject 这里对应的就是GradleDemo
+//        if (index == 0) {
+//            println "Root Project is $entry"
+//        } else {
+//            //子节点就是module_one 和 app了
+//            println "Child Project is $entry"
+//        }
+//    }
 }
 
 this.getSubProjects()
@@ -90,12 +90,12 @@ def getContent(String path){
 //    println(mFile.text)
 }
 
-fileTree("app/build/outputs/apk") {
-    FileTree fileTree ->
-        fileTree.visit {
-            FileTreeElement element ->
-                println("the file is $element.file.name")
-        }
-
-}
+//fileTree("app/build/outputs/apk") {
+//    FileTree fileTree ->
+//        fileTree.visit {
+//            FileTreeElement element ->
+//                println("the file is $element.file.name")
+//        }
+//
+//}
 
