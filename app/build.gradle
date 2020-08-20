@@ -1,8 +1,9 @@
 apply plugin: 'com.android.application'
-apply plugin: "pluginSrc"
+//apply plugin: "pluginSrc"
 apply from:'../gradle/custom.gradle'
 apply from:'../gradle/extension.gradle'
 apply from:'../gradle/domain.gradle'
+apply plugin: 'com.hz.customplugin'
 
 
 android {
@@ -53,13 +54,6 @@ android {
 
 }
 
-
-releaseInfo {
-    versionCode = "1"
-    versionName = "1.0.0"
-    versionInfo = "第一个版本"
-    fileName = "release.xml"
-}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])

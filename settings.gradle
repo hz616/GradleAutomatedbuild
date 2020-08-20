@@ -1,4 +1,4 @@
-rootProject.name = 'GradleDemo'
+include ':MyPlugin'
 include ':app'
 include ':module_one'
 
@@ -77,4 +77,3 @@ gradle.buildFinished {
     def executeTime = System.currentTimeMillis() - beginOfProjectExecute
     println "执行阶段,耗时 $executeTime  ms"
 }
-include ':buildsrc'
