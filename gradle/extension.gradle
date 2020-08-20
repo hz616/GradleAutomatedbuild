@@ -1,0 +1,72 @@
+import com.sun.corba.se.spi.orbutil.closure.Closure
+import org.gradle.util.ConfigureUtil
+
+class OuterExt {
+
+    String outerName
+    String msg
+    InnerExt innerExt = new InnerExt()
+
+    void outerName(String name) {
+        outerName = name
+    }
+
+    void msg(String msg) {
+        this.msg = msg
+    }
+
+    void inner(Action<InnerExt> action) {
+        action.execute(innerExt)
+    }
+
+
+    void inner(Closure c) {
+        ConfigureUtil.configure(c, innerExt)
+    }
+
+
+    @Override
+    public String toString() {
+        return "OuterExt{" +
+                "outerName='" + outerName + '\'' +
+                ", msg='" + msg + '\'' +
+                ", innerExt=" + innerExt +
+                '}';
+    }
+}
+
+
+class InnerExt {
+
+    String innerName
+    String msg
+
+    void innerName(String name) {
+        innerName = name
+    }
+
+    void msg(String msg) {
+        this.msg = msg
+    }
+
+    String toString() {
+        return "InnerExt[ name = ${innerName}, msg = ${msg}]"
+    }
+}
+
+
+def outExt = getExtensions().create("outer", OuterExt)
+
+outer {
+    outerName "outer"
+    msg "this is a outer message."
+
+    inner {
+        innerName "inner"
+        msg "This is a inner message."
+    }
+}
+
+task testInnerExt doLast {
+    println outExt
+}

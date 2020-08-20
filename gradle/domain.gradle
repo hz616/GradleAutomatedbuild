@@ -1,0 +1,71 @@
+class TestDomainObj {
+
+    //必须有一个name属性，而且初始化后不能被修改
+    private String name
+    String msg
+
+    TestDomainObj(String name) {
+        this.name = name
+    }
+
+
+    void msg(String msg) {
+        this.msg = msg
+    }
+
+
+    @Override
+    public String toString() {
+        return "TestDomainObj{" +
+                "name='" + name + '\'' +
+                ", msg='" + msg + '\'' +
+                '}';
+    }
+}
+
+
+class TestDomainExt {
+    NamedDomainObjectContainer<TestDomainObj> testDomains
+
+    TestDomainExt(Project project) {
+        NamedDomainObjectContainer<TestDomainObj> domainObjs = project.container(TestDomainObj)
+        testDomains = domainObjs
+    }
+
+    //支持dsl语法
+    void testDomain(Action<NamedDomainObjectContainer<TestDomainObj>> action) {
+        action.execute(testDomains)
+    }
+
+
+    void test() {
+        //可以通过getByName获取
+        TestDomainObj testData = testDomains.getByName("domainOne")
+        println "getByName : $testData"
+
+        testDomains.all {
+            data -> println data
+        }
+    }
+}
+
+def testExt = getExtensions().create("testDomainExt", TestDomainExt, project)
+
+testDomainExt {
+    testDomain {
+
+        domainOne {
+            msg 'this is domain one'
+        }
+
+
+        domainTwo {
+            msg 'this is domain Two'
+        }
+
+    }
+}
+
+task domainExtTask doLast {
+    testExt.test()
+}

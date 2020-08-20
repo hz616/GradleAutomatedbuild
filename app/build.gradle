@@ -1,6 +1,9 @@
 apply plugin: 'com.android.application'
 apply plugin: "pluginSrc"
 apply from:'../gradle/custom.gradle'
+apply from:'../gradle/extension.gradle'
+apply from:'../gradle/domain.gradle'
+
 
 android {
     compileSdkVersion 29
