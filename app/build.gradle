@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 //apply plugin: "pluginSrc"
-apply from:'../gradle/custom.gradle'
-apply from:'../gradle/extension.gradle'
-apply from:'../gradle/domain.gradle'
+apply from: '../gradle/custom.gradle'
+apply from: '../gradle/extension.gradle'
+apply from: '../gradle/domain.gradle'
 apply plugin: 'com.hz.customplugin'
 
 
@@ -52,6 +52,11 @@ android {
         }
     }
 
+}
+
+releaseInfo {
+    versionName "第一个版本"
+    versionCode "1.0.0"
 }
 
 
