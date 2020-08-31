@@ -1,6 +1,5 @@
-
 apply plugin: 'groovy'
-apply plugin:'maven'//导入maven插件
+apply plugin: 'maven'//导入maven插件
 
 
 dependencies {
@@ -10,6 +9,11 @@ dependencies {
 
     implementation 'com.android.tools.build:gradle:3.6.3'
     implementation 'org.javassist:javassist:3.20.0-GA'
+
+    implementation group: 'org.ow2.asm', name: 'asm', version: '7.1'
+    implementation group: 'org.ow2.asm', name: 'asm-commons', version: '7.1'
+
+
 
 }
 

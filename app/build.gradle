@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-//apply plugin: "pluginSrc"
 apply from: '../gradle/custom.gradle'
 apply from: '../gradle/extension.gradle'
 apply from: '../gradle/domain.gradle'
@@ -27,37 +26,12 @@ android {
         }
     }
 
-    flavorDimensions "environment", "app"
-
-    productFlavors {
-
-        appOne {
-            dimension "app"
-        }
-
-        appTwo {
-            dimension "app"
-        }
-
-        dev {
-            dimension "environment"
-        }
-
-        product {
-            dimension "environment"
-        }
-
-        yufa {
-            dimension "environment"
-        }
-    }
-
 }
 
-releaseInfo {
-    versionName "第一个版本"
-    versionCode "1.0.0"
-}
+//releaseInfo {
+//    versionName "第一个版本"
+//    versionCode "1.0.0"
+//}
 
 
 dependencies {
