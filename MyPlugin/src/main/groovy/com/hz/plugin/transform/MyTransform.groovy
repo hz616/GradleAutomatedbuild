@@ -4,8 +4,8 @@ import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.hz.plugin.MyClassVisitor
 import org.apache.commons.codec.digest.DigestUtils
-import org.apache.commons.io.IOUtils
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -82,16 +82,16 @@ class MyTransform extends Transform {
 
         inputs.each { TransformInput input ->
 
-                input.directoryInputs.each {
-                    DirectoryInput directoryInput ->
-                        handleDirectInput(directoryInput, outPutProvider)
-                }
+            input.directoryInputs.each {
+                DirectoryInput directoryInput ->
+                    handleDirectInput(directoryInput, outPutProvider)
+            }
 
-                //遍历jarInputs
-                input.jarInputs.each { JarInput jarInput ->
-                    //处理jarInputs
-                    handleJarInputs(jarInput, outPutProvider)
-                }
+            //遍历jarInputs
+            input.jarInputs.each { JarInput jarInput ->
+                //处理jarInputs
+                handleJarInputs(jarInput, outPutProvider)
+            }
         }
 
         def cost = (System.currentTimeMillis() - startTime) / 1000
@@ -105,15 +105,15 @@ class MyTransform extends Transform {
             directoryInput.file.eachFileRecurse {
                 File file ->
                     def name = file.name
-                    println("deal class name is $name")
                     if (name.endsWith(".class") && !name.startsWith("R\$") && "R.class" != name
-                            && "BuildConfig.class" != name && "MainActivity.class" == name) {
+                            && "BuildConfig.class" != name) {
                         println("----------deal with class file <$name>")
                         ClassReader classReader = new ClassReader(file.bytes)
                         ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
                         ClassVisitor cv = new MyClassVisitor(classWriter)
                         classReader.accept(cv, ClassReader.EXPAND_FRAMES)
                         byte[] code = classWriter.toByteArray()
+                        println("file paths is ${file.parentFile.absolutePath + File.separator + name}")
                         FileOutputStream fos = new FileOutputStream(file.parentFile.absolutePath + File.separator + name)
                         fos.write(code)
                         fos.close()
@@ -121,9 +121,15 @@ class MyTransform extends Transform {
             }
         }
         def dest = outputProvider.getContentLocation(directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
+        println("dest path is ${dest.absolutePath}")
         FileUtils.copyDirectory(directoryInput.file, dest)
     }
 
+    /**
+     * jar的处理逻辑必须有，即使不做任何处理
+     * @param jarInput
+     * @param outputProvider
+     */
     static void handleJarInputs(JarInput jarInput, TransformOutputProvider outputProvider) {
         if (jarInput.file.getAbsolutePath().endsWith(".jar")) {
             //重名名输出文件,因为可能同名,会覆盖
@@ -147,9 +153,9 @@ class MyTransform extends Transform {
                 ZipEntry zipEntry = new ZipEntry(entryName)
                 InputStream inputStream = jarFile.getInputStream(jarEntry)
                 //插桩class
+                //这里如果不需要处理jar包里面的class文件的话，可以去掉，只保留文件的复制写入即可
                 if (entryName.endsWith(".class") && !entryName.startsWith("R\$")
-                        && !"R.class".equals(entryName) && !"BuildConfig.class".equals(entryName)
-                        && "MainActivity.class".equals(entryName)) {
+                        && "R.class" != entryName && "BuildConfig.class" != entryName && "MainActivity.class" == entryName) {
                     //class文件处理
                     println '----------- deal with "jar" class file <' + entryName + '> -----------'
                     jarOutputStream.putNextEntry(zipEntry)
@@ -177,6 +183,6 @@ class MyTransform extends Transform {
 
 
     static boolean checkClassFile(String name) {
-        return (name.endsWith(".class") && !name.startsWith("R\$") && "R.class" != name && "BuildConfig.class" != name)
+        return (name.endsWith(".class") && !name.startsWith("R\$") && "R.class" != name && "BuildConfig.class" != name && "MainActivity.class" == name)
     }
 }

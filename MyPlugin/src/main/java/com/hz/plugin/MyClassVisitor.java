@@ -25,12 +25,13 @@ public class MyClassVisitor extends ClassVisitor implements Opcodes {
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
         System.out.println("MyClassVisitor : visitMethod : " + name);
         MethodVisitor mv = cv.visitMethod(access, name, descriptor, signature, exceptions);
-        if ("com/example/gradledemo/MainActivity".equals(this.mClassName)) {
-            if ("onCreate".equals(name)) {
-                return new MyOnCreateMethodVisitor(mv);
-            } else if ("onDestroy".equals(name)) {
-                return new MyOnDestroyMethodVisitor(mv);
-            }
+        if ("onCreate".equals(name)) {
+            return new MyOnCreateMethodVisitor(mv);
+        } else if ("onDestroy".equals(name)) {
+            return new MyOnDestroyMethodVisitor(mv);
+        }
+        else if ("onClick".equals(name)) {
+            return new MyOnClickMethodVisitor(mv);
         }
         return mv;
     }
