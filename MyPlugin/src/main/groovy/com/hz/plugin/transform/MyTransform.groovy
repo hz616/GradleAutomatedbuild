@@ -2,13 +2,14 @@ package com.hz.plugin.transform
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
-import com.hz.plugin.MyClassVisitor
+import com.hz.plugin.AutoModify
+import com.hz.plugin.util.AutoMatchUtil
+import com.hz.plugin.util.AutoTextUtil
+import com.hz.plugin.util.Logger
+import groovy.io.FileType
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
 
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
@@ -75,7 +76,9 @@ class MyTransform extends Transform {
         println("----------MyTransform visit start----------")
         def startTime = System.currentTimeMillis()
         def inputs = transformInvocation.inputs
+        printlnJarAndDir(inputs)
         TransformOutputProvider outPutProvider = transformInvocation.outputProvider
+        def context = transformInvocation.context
         if (outPutProvider != null) {
             outPutProvider.deleteAll()
         }
@@ -84,7 +87,7 @@ class MyTransform extends Transform {
 
             input.directoryInputs.each {
                 DirectoryInput directoryInput ->
-                    handleDirectInput(directoryInput, outPutProvider)
+                    handleDirectInput(directoryInput, outPutProvider, context)
             }
 
             //遍历jarInputs
@@ -99,30 +102,32 @@ class MyTransform extends Transform {
         println("myTransform cost: $cost s")
     }
 
-    static void handleDirectInput(DirectoryInput directoryInput, TransformOutputProvider outputProvider) {
+    static void handleDirectInput(DirectoryInput directoryInput, TransformOutputProvider outputProvider, Context context) {
         //directoryInput.changedFiles  changeFile可以获取增量模式下的修改过的文件
-        if (directoryInput.file.isDirectory()) {
-            directoryInput.file.eachFileRecurse {
-                File file ->
-                    def name = file.name
-                    if (name.endsWith(".class") && !name.startsWith("R\$") && "R.class" != name
-                            && "BuildConfig.class" != name) {
-                        println("----------deal with class file <$name>")
-                        ClassReader classReader = new ClassReader(file.bytes)
-                        ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
-                        ClassVisitor cv = new MyClassVisitor(classWriter)
-                        classReader.accept(cv, ClassReader.EXPAND_FRAMES)
-                        byte[] code = classWriter.toByteArray()
-                        println("file paths is ${file.parentFile.absolutePath + File.separator + name}")
-                        FileOutputStream fos = new FileOutputStream(file.parentFile.absolutePath + File.separator + name)
-                        fos.write(code)
-                        fos.close()
+        def dest = outputProvider.getContentLocation(directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
+        Logger.info("||-->开始遍历特定目录  ${dest.absolutePath}")
+        File dir = directoryInput.file
+        if (dir) {
+            HashMap<String, File> modifyMap = new HashMap<>()
+            dir.traverse(type: FileType.FILES, nameFilter: ~/.*\.class/) {
+                File classFile ->
+                    File modified = modifyClassFile(dir, classFile, context.getTemporaryDir())
+                    if (modified != null) {
+                        modifyMap.put(classFile.absolutePath.replace(dir.absolutePath, ""), modified)
                     }
             }
+            FileUtils.copyDirectory(directoryInput.file, dest)
+            modifyMap.entrySet().each {
+                Map.Entry<String, File> en ->
+                    File target = new File(dest.absolutePath + en.getKey())
+                    if (target.exists()) {
+                        target.delete()
+                    }
+                    FileUtils.copyFile(en.getValue(), target)
+                    en.getValue().delete()
+            }
         }
-        def dest = outputProvider.getContentLocation(directoryInput.name, directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
-        println("dest path is ${dest.absolutePath}")
-        FileUtils.copyDirectory(directoryInput.file, dest)
+        Logger.info("||-->结束遍历特定目录  ${dest.absolutePath}")
     }
 
     /**
@@ -150,24 +155,26 @@ class MyTransform extends Transform {
             while (enumeration.hasMoreElements()) {
                 JarEntry jarEntry = (JarEntry) enumeration.nextElement()
                 String entryName = jarEntry.getName()
+                String className
                 ZipEntry zipEntry = new ZipEntry(entryName)
                 InputStream inputStream = jarFile.getInputStream(jarEntry)
                 //插桩class
-                //这里如果不需要处理jar包里面的class文件的话，可以去掉，只保留文件的复制写入即可
-                if (entryName.endsWith(".class") && !entryName.startsWith("R\$")
-                        && "R.class" != entryName && "BuildConfig.class" != entryName && "MainActivity.class" == entryName) {
+                jarOutputStream.putNextEntry(zipEntry)
+                byte[] modifiedClassBytes = null
+                byte[] sourceClassBytes = IOUtils.toByteArray(inputStream)
+                if (entryName.endsWith(".class")) {
                     //class文件处理
-                    println '----------- deal with "jar" class file <' + entryName + '> -----------'
-                    jarOutputStream.putNextEntry(zipEntry)
-                    ClassReader classReader = new ClassReader(IOUtils.toByteArray(inputStream))
-                    ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
-                    ClassVisitor cv = new MyClassVisitor(classWriter)
-                    classReader.accept(cv, ClassReader.EXPAND_FRAMES)
-                    byte[] code = classWriter.toByteArray()
-                    jarOutputStream.write(code)
+                    className = entryName.replace("/", ".").replace(".class", "")
+
+                    if (AutoMatchUtil.isShouldModifyClass(className)) {
+                        modifiedClassBytes = AutoModify.modifyClasses(className, sourceClassBytes)
+                    }
+
+                }
+                if (modifiedClassBytes == null) {
+                    jarOutputStream.write(sourceClassBytes)
                 } else {
-                    jarOutputStream.putNextEntry(zipEntry)
-                    jarOutputStream.write(IOUtils.toByteArray(inputStream))
+                    jarOutputStream.write(modifiedClassBytes)
                 }
                 jarOutputStream.closeEntry()
             }
@@ -182,7 +189,63 @@ class MyTransform extends Transform {
     }
 
 
-    static boolean checkClassFile(String name) {
-        return (name.endsWith(".class") && !name.startsWith("R\$") && "R.class" != name && "BuildConfig.class" != name && "MainActivity.class" == name)
+    /**
+     * 目录文件中修改对应字节码
+     */
+    private static File modifyClassFile(File dir, File classFile, File tempDir) {
+        File modified = null
+        FileOutputStream outputStream = null
+        try {
+            String className = AutoTextUtil.path2ClassName(classFile.absolutePath.replace(dir.absolutePath + File.separator, ""))
+            if (AutoMatchUtil.isShouldModifyClass(className)) {
+                byte[] sourceClassBytes = IOUtils.toByteArray(new FileInputStream(classFile))
+                byte[] modifiedClassBytes = AutoModify.modifyClasses(className, sourceClassBytes)
+                if (modifiedClassBytes) {
+                    modified = new File(tempDir, className.replace('.', '') + '.class')
+                    if (modified.exists()) {
+                        modified.delete()
+                    }
+                    modified.createNewFile()
+                    outputStream = new FileOutputStream(modified)
+                    outputStream.write(modifiedClassBytes)
+                }
+            } else {
+                return classFile
+            }
+        } catch (Exception e) {
+            e.printStackTrace()
+        } finally {
+            try {
+                if (outputStream != null) {
+                    outputStream.close()
+                }
+            } catch (Exception e) {
+            }
+        }
+        return modified
+
     }
+
+    /**
+     * 包括两种数据:jar包和class目录，打印出来用于调试
+     */
+    private static void printlnJarAndDir(Collection<TransformInput> inputs) {
+
+        def classPaths = []
+        String buildTypes
+        String productFlavors
+        inputs.each { TransformInput input ->
+            input.directoryInputs.each { DirectoryInput directoryInput ->
+                classPaths.add(directoryInput.file.absolutePath)
+                buildTypes = directoryInput.file.name
+                productFlavors = directoryInput.file.parentFile.name
+                Logger.info("||项目class目录：${directoryInput.file.absolutePath}")
+            }
+            input.jarInputs.each { JarInput jarInput ->
+                classPaths.add(jarInput.file.absolutePath)
+                Logger.info("||项目jar包：${jarInput.file.absolutePath}")
+            }
+        }
+    }
+
 }

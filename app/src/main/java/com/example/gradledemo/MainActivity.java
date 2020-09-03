@@ -1,14 +1,13 @@
 package com.example.gradledemo;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity {
     private final String TAG = "";
 
     private Button mBtn;
@@ -32,8 +31,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onDestroy();
     }
 
-    @Override
-    public void onClick(View view) {
-
-    }
 }
