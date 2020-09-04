@@ -111,6 +111,7 @@ class MyTransform extends Transform {
             HashMap<String, File> modifyMap = new HashMap<>()
             dir.traverse(type: FileType.FILES, nameFilter: ~/.*\.class/) {
                 File classFile ->
+                    Logger.info("||-->file name is $classFile.name")
                     File modified = modifyClassFile(dir, classFile, context.getTemporaryDir())
                     if (modified != null) {
                         modifyMap.put(classFile.absolutePath.replace(dir.absolutePath, ""), modified)

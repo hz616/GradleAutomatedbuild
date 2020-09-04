@@ -1,10 +1,10 @@
 package com.hz.plugin.visitor
 
-import com.hz.plugin.MyOnClickMethodVisitor
-import com.hz.plugin.util.Logger
+
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import com.hz.plugin.util.Logger
 
 class AutoClassVisitor extends ClassVisitor {
 
@@ -37,11 +37,8 @@ class AutoClassVisitor extends ClassVisitor {
     @Override
     MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
         MethodVisitor mv = classVisitor.visitMethod(access, name, descriptor, signature, exceptions);
-        if ("onClick" == name) {
-            Logger.info("||---access=${Logger.accCode2String(access)};\tname=${name};\tdescriptor=${descriptor};\tsignature=${signature}")
-            return new MyOnClickMethodVisitor(mv)
-        }
-        return mv
+        MethodVisitor autoMethodVisitor = new AutoMethodVisitor(mv, access, name, descriptor, mSuperName, mClassName, mInterfaces)
+        return autoMethodVisitor
     }
 
 
