@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 apply from: '../gradle/custom.gradle'
 apply from: '../gradle/extension.gradle'
 apply from: '../gradle/domain.gradle'
@@ -47,6 +48,8 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    implementation "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
 this.getParentProject()
@@ -154,6 +157,9 @@ this.afterEvaluate {
         def task = variant.checkManifest
 //        println task.name
     }
+}
+repositories {
+    mavenCentral()
 }
 
 
