@@ -2,6 +2,7 @@ package com.hz.plugin.transform
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import com.android.ide.common.internal.WaitableExecutor
 import com.hz.plugin.AutoModify
 import com.hz.plugin.util.AutoMatchUtil
 import com.hz.plugin.util.AutoTextUtil
@@ -11,6 +12,7 @@ import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.IOUtils
 
+import java.util.concurrent.Callable
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
@@ -83,19 +85,37 @@ class MyTransform extends Transform {
             outPutProvider.deleteAll()
         }
 
+        def waitableExecutor = WaitableExecutor.useGlobalSharedThreadPool()//并发编译
+
         inputs.each { TransformInput input ->
 
             input.directoryInputs.each {
                 DirectoryInput directoryInput ->
-                    handleDirectInput(directoryInput, outPutProvider, context)
+                    waitableExecutor.execute(new Callable<Object>() {
+                        @Override
+                        Object call() throws Exception {
+                            handleDirectInput(directoryInput, outPutProvider, context)
+                            return null
+                        }
+                    })
+
             }
 
             //遍历jarInputs
             input.jarInputs.each { JarInput jarInput ->
-                //处理jarInputs
-                handleJarInputs(jarInput, outPutProvider)
+                waitableExecutor.execute(new Callable<Object>() {
+                    @Override
+                    Object call() throws Exception {
+                        //处理jarInputs
+                        handleJarInputs(jarInput, outPutProvider)
+                        return null
+                    }
+                })
+
+
             }
         }
+        waitableExecutor.waitForTasksWithQuickFail(true)
 
         def cost = (System.currentTimeMillis() - startTime) / 1000
         println("----------MyTransform visit end----------")

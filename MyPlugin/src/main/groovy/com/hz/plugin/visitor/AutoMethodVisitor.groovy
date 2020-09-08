@@ -44,16 +44,7 @@ class AutoMethodVisitor extends AdviceAdapter {
     protected void onMethodEnter() {
         super.onMethodEnter()
 
-        //方法不是public 和 static直接返回
-        if (!(LogAnalyticsUtil.isPublic(access)) && !LogAnalyticsUtil.isStatic(access)) return
-
-        String methodNameDesc = methodName + methodDesc
-
-
-        if (className.startsWith("android") || className.startsWith("androidx")) return
-
-        Logger.info("||method name  is : $methodName and method desc is $methodDesc and access is ${Logger.accCode2String(access)}")
-
+        //这里放在下面一个判断你的上面，因为lambda很变态，有时候是static的，有时候不是
         if (methodName.trim().startsWith('lambda$') && LogAnalyticsUtil.isPrivate(access) && LogAnalyticsUtil.isSynthetic(access)) {
             LogMethodCell logMethodCell = LogHookConfig.sLambdaMethods.get(methodDesc)
             if (logMethodCell != null) {
@@ -68,6 +59,17 @@ class AutoMethodVisitor extends AdviceAdapter {
                 return
             }
         }
+
+
+        //方法不是public 和 static直接返回
+        if (!(LogAnalyticsUtil.isPublic(access)) && !LogAnalyticsUtil.isStatic(access)) return
+
+        String methodNameDesc = methodName + methodDesc
+
+
+        if (className.startsWith("android") || className.startsWith("androidx")) return
+
+        Logger.info("||method name  is : $methodName and method desc is $methodDesc and access is ${Logger.accCode2String(access)}")
 
 
         if (!isHasTracked) {
