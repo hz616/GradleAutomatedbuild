@@ -1,5 +1,6 @@
 package com.hz.plugin.visitor
 
+import com.hz.plugin.GlobalConfig
 import com.hz.plugin.LogHookConfig
 import com.hz.plugin.bean.LogMethodCell
 import com.hz.plugin.util.LogAnalyticsUtil
@@ -53,7 +54,7 @@ class AutoMethodVisitor extends AdviceAdapter {
                     paramStart = paramStart - 1
                 }
                 Logger.info("paramStart is $paramStart and paramCount is ${logMethodCell.paramsCount}")
-                LogAnalyticsUtil.visitMethodWithLoadedParams(methodVisitor, Opcodes.INVOKESTATIC, LogHookConfig.LOG_ANALYTICS_BASE,
+                LogAnalyticsUtil.visitMethodWithLoadedParams(methodVisitor, Opcodes.INVOKESTATIC, GlobalConfig.instance.autoTrackBase,
                         logMethodCell.agentName, logMethodCell.agentDesc, paramStart, logMethodCell.paramsCount, logMethodCell.opcodes)
                 isHasTracked = true
                 return
@@ -76,7 +77,7 @@ class AutoMethodVisitor extends AdviceAdapter {
             if (methodNameDesc == 'onClick(Landroid/view/View;)V') {
                 Logger.info("method enter and name: ${methodName}")
                 methodVisitor.visitVarInsn(ALOAD, 1)
-                methodVisitor.visitMethodInsn(INVOKESTATIC, LogHookConfig.LOG_ANALYTICS_BASE, "trackViewOnClick", "(Landroid/view/View;)V", false)
+                methodVisitor.visitMethodInsn(INVOKESTATIC, GlobalConfig.instance.autoTrackBase, "trackViewOnClick", "(Landroid/view/View;)V", false)
                 isHasTracked = true
             }
         }

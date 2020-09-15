@@ -81,7 +81,8 @@ class MyTransform extends Transform {
         printlnJarAndDir(inputs)
         TransformOutputProvider outPutProvider = transformInvocation.outputProvider
         def context = transformInvocation.context
-        if (outPutProvider != null) {
+
+        if(!incremental && outPutProvider != null){
             outPutProvider.deleteAll()
         }
 
@@ -107,7 +108,7 @@ class MyTransform extends Transform {
                     @Override
                     Object call() throws Exception {
                         //处理jarInputs
-                        handleJarInputs(jarInput, outPutProvider)
+                        handleJarInputs(jarInput, outPutProvider,context)
                         return null
                     }
                 })
@@ -156,57 +157,81 @@ class MyTransform extends Transform {
      * @param jarInput
      * @param outputProvider
      */
-    static void handleJarInputs(JarInput jarInput, TransformOutputProvider outputProvider) {
-        if (jarInput.file.getAbsolutePath().endsWith(".jar")) {
-            //重名名输出文件,因为可能同名,会覆盖
-            def jarName = jarInput.name
-            def md5Name = DigestUtils.md5Hex(jarInput.file.getAbsolutePath())
-            if (jarName.endsWith(".jar")) {
-                jarName = jarName.substring(0, jarName.length() - 4)
-            }
-            JarFile jarFile = new JarFile(jarInput.file)
-            Enumeration enumeration = jarFile.entries()
-            File tmpFile = new File(jarInput.file.getParent() + File.separator + "classes_temp.jar")
-            //避免上次的缓存被重复插入
-            if (tmpFile.exists()) {
-                tmpFile.delete()
-            }
-            JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(tmpFile))
-            //用于保存
-            while (enumeration.hasMoreElements()) {
-                JarEntry jarEntry = (JarEntry) enumeration.nextElement()
-                String entryName = jarEntry.getName()
-                String className
-                ZipEntry zipEntry = new ZipEntry(entryName)
-                InputStream inputStream = jarFile.getInputStream(jarEntry)
-                //插桩class
-                jarOutputStream.putNextEntry(zipEntry)
-                byte[] modifiedClassBytes = null
-                byte[] sourceClassBytes = IOUtils.toByteArray(inputStream)
-                if (entryName.endsWith(".class")) {
-                    //class文件处理
-                    className = entryName.replace("/", ".").replace(".class", "")
+    static void handleJarInputs(JarInput jarInput, TransformOutputProvider outputProvider,Context context) {
 
-                    if (AutoMatchUtil.isShouldModifyClass(className)) {
-                        modifiedClassBytes = AutoModify.modifyClasses(className, sourceClassBytes)
-                    }
-
-                }
-                if (modifiedClassBytes == null) {
-                    jarOutputStream.write(sourceClassBytes)
-                } else {
-                    jarOutputStream.write(modifiedClassBytes)
-                }
-                jarOutputStream.closeEntry()
-            }
-            //结束
-            jarOutputStream.close()
-            jarFile.close()
-            def dest = outputProvider.getContentLocation(jarName + md5Name,
-                    jarInput.contentTypes, jarInput.scopes, Format.JAR)
-            FileUtils.copyFile(tmpFile, dest)
-            tmpFile.delete()
+        String destName = jarInput.file.name
+        /** 截取文件路径的md5值重命名输出文件,因为可能同名,会覆盖*/
+        def hexName = DigestUtils.md5Hex(jarInput.file.absolutePath).substring(0, 8)
+        if (destName.endsWith(".jar")) {
+            destName = destName.substring(0, destName.length() - 4)
         }
+        /** 获得输出文件*/
+        File dest = outputProvider.getContentLocation(destName + "_" + hexName, jarInput.contentTypes, jarInput.scopes, Format.JAR)
+        Logger.info("||-->开始遍历特定jar ${dest.absolutePath}")
+//        modifyJarFile(jarInput.file, context.getTemporaryDir())
+        def modifiedJar = null
+        Logger.info("||-->结束遍历特定jar ${dest.absolutePath}")
+        if (modifiedJar == null) {
+            modifiedJar = jarInput.file
+        }
+        FileUtils.copyFile(modifiedJar, dest)
+    }
+
+    /**
+     * Jar文件中修改对应字节码
+     */
+    private static File modifyJarFile(File jarFile, File tempDir) {
+        if (jarFile) {
+            return modifyJar(jarFile, tempDir, true)
+
+        }
+        return null
+    }
+
+    private static File modifyJar(File jarFile, File tempDir, boolean nameHex) {
+        /**
+         * 读取原jar
+         */
+        def file = new JarFile(jarFile)
+        /** 设置输出到的jar */
+        def hexName = ""
+        if (nameHex) {
+            hexName = DigestUtils.md5Hex(jarFile.absolutePath).substring(0, 8)
+        }
+        def outputJar = new File(tempDir, hexName + jarFile.name)
+        JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(outputJar))
+        Enumeration enumeration = file.entries()
+
+        while (enumeration.hasMoreElements()) {
+            JarEntry jarEntry = (JarEntry) enumeration.nextElement()
+            InputStream inputStream = file.getInputStream(jarEntry)
+
+            String entryName = jarEntry.getName()
+            String className
+
+            ZipEntry zipEntry = new ZipEntry(entryName)
+
+            jarOutputStream.putNextEntry(zipEntry)
+
+            byte[] modifiedClassBytes = null
+            byte[] sourceClassBytes = IOUtils.toByteArray(inputStream)
+            if (entryName.endsWith(".class")) {
+                className = entryName.replace("/", ".").replace(".class", "")
+//                Logger.info("Jar:className:" + className)
+                if (AutoMatchUtil.isShouldModifyClass(className)) {
+                    modifiedClassBytes = AutoModify.modifyClasses(className, sourceClassBytes)
+                }
+            }
+            if (modifiedClassBytes == null) {
+                jarOutputStream.write(sourceClassBytes)
+            } else {
+                jarOutputStream.write(modifiedClassBytes)
+            }
+            jarOutputStream.closeEntry()
+        }
+        jarOutputStream.close()
+        file.close()
+        return outputJar
     }
 
 

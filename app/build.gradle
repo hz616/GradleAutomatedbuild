@@ -34,10 +34,11 @@ android {
 
 }
 
-//releaseInfo {
-//    versionName "第一个版本"
-//    versionCode "1.0.0"
-//}
+autoTrackConfig {
+    hookMethod "com/example/gradledemo/auto/AutoTrackHelper"
+    isOpenAutoTrack true
+    isDebug false
+}
 
 
 dependencies {

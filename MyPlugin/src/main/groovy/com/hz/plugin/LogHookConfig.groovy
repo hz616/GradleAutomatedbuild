@@ -5,8 +5,6 @@ import org.objectweb.asm.Opcodes
 
 class LogHookConfig {
 
-    public static final String LOG_ANALYTICS_BASE = "com/example/gradledemo/auto/AutoTrackHelper"
-
 
     public final static HashMap<String, LogMethodCell> sLambdaMethods = new HashMap<>()
 
